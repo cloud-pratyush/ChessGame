@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<title>Chompy's Chess Castle</title>
+<style>
+  :root { --bs: min(94vw, 72vh, 640px); --ink:#3b2a6b; --bg:#fff7e6; }
+  @media (prefers-color-scheme: dark) { :root { --ink:#f3e9ff; --bg:#241a3d; } }
+  * { box-sizing: border-box; -webkit-user-select: none; user-select: none; touch-action: manipulation; -webkit-tap-highlight-color: transparent; }
+  body { margin:0; padding: env(safe-area-inset-top) 8px env(safe-area-inset-bottom); background: var(--bg); color: var(--ink);
+         font-family: "Comic Sans MS","Chalkboard SE","Marker Felt",system-ui,sans-serif; }
+  h1 { text-align:center; margin:10px 0; font-size: clamp(22px,4vw,34px); }
+  #wrap { display:flex; flex-wrap:wrap; gap:16px; justify-content:center; align-items:flex-start; padding-bottom:20px; }
+  #board { display:grid; grid-template-columns:repeat(8,1fr); width:var(--bs); height:var(--bs);
+           border:6px solid #8b5cf6; border-radius:14px; overflow:hidden; box-shadow:0 6px 18px rgba(0,0,0,.25); }
+  .sq { position:relative; display:flex; align-items:center; justify-content:center; font-size:calc(var(--bs) / 8 * .78); line-height:1; }
+  .sq.l { background-color:#fff3c4; } .sq.d { background-color:#7ec8a9; }
+  .sq.last { background-image:linear-gradient(rgba(255,214,0,.5),rgba(255,214,0,.5)); }
+  .sq.sel { box-shadow: inset 0 0 0 4px #ff9f1c; }
+  .sq.chk { background-image:radial-gradient(circle, rgba(255,40,40,.85), rgba(255,40,40,0) 75%); }
+  .sq.hint { animation:pulse 1s infinite; }
+  @keyframes pulse { 50% { box-shadow: inset 0 0 0 6px #3b82f6; } }
+  .pc { pointer-events:none; }
+  .pc.w { color:#fff; text-shadow:-1px -1px 0 #222,1px -1px 0 #222,-1px 1px 0 #222,1px 1px 0 #222,0 3px 3px rgba(0,0,0,.4); }
+  .pc.b { color:#2b2350; text-shadow:0 1px 0 rgba(255,255,255,.5); }
+  .dot { position:absolute; width:28%; height:28%; border-radius:50%; background:rgba(40,40,40,.35); pointer-events:none; }
+  .dot.cap { width:92%; height:92%; background:none; border:5px solid rgba(225,50,50,.65); }
+  #panel { flex:1 1 280px; max-width:420px; display:flex; flex-direction:column; gap:10px; }
+  #speech { display:flex; gap:10px; align-items:flex-start; }
+  #face { font-size:56px; line-height:1; }
+  #bubble { flex:1; background:#fff; color:#3b2a6b; border:3px solid #8b5cf6; border-radius:18px; padding:12px 14px;
+            font-size:18px; min-height:96px; white-space:pre-line; animation:pop .3s; }
+  @keyframes pop { from { transform:scale(.9); opacity:.4; } }
+  #status { font-weight:bold; font-size:20px; text-align:center; }
+  #mission { background:#ffe08a; color:#5a3b00; border-radius:14px; padding:10px 12px; font-size:17px; }
+  #stars { font-size:20px; font-weight:bold; text-align:center; }
+  #controls { display:flex; flex-wrap:wrap; gap:8px; }
+  button, select { font:inherit; font-size:17px; padding:10px 14px; border-radius:12px; border:3px solid #8b5cf6; background:#fff; color:#3b2a6b; }
+  button:active { transform:scale(.95); }
+  #toast { position:fixed; left:50%; top:16px; transform:translate(-50%,-150%); background:#22c55e; color:#fff; padding:12px 20px;
+           border-radius:999px; font-size:20px; font-weight:bold; transition:transform .3s; z-index:5; text-align:center; }
+  #toast.show { transform:translate(-50%,0); }
+  #confetti { position:fixed; inset:0; pointer-events:none; overflow:hidden; z-index:4; }
+  #confetti span { position:absolute; top:-60px; animation:fall 3.5s linear forwards; }
+  @keyframes fall { to { transform:translateY(115vh) rotate(360deg); } }
+  #loading { position:fixed; inset:0; background:var(--bg); display:flex; flex-direction:column; align-items:center; justify-content:center;
+             font-size:24px; z-index:10; text-align:center; padding:20px; }
+</style>
+</head>
+<body>
+<h1>🐲 Chompy's Chess Castle 🏰</h1>
+<div id="wrap">
+  <div id="board"></div>
+  <div id="panel">
+    <div id="speech"><div id="face">🐲</div><div id="bubble"></div></div>
+    <div id="status"></div>
+    <div id="mission"></div>
+    <div id="stars"></div>
+    <div id="controls">
+      <select id="level" aria-label="Difficulty">
+        <option value="easy">🐣 Baby Dragon (easy)</option>
+        <option value="medium" selected>🧙 Silly Wizard (medium)</option>
+        <option value="hard">🤖 Dragon Master (hard)</option>
+      </select>
+      <button id="btn-hint">🔮 Hint</button>
+      <button id="btn-undo">⏪ Undo</button>
+      <button id="btn-new">🔄 New Game</button>
+    </div>
+  </div>
+</div>
+<div id="toast"></div>
+<div id="confetti"></div>
+<div id="loading">🐲 Waking up Chompy...<br><small>(first load takes a few seconds)</small></div>
+
+<script src="https://cdn.jsdelivr.net/pyodide/v0.26.4/full/pyodide.js"></script>
+<script>
+  (async () => {
+    try {
+      const py = await loadPyodide();
+      const code = await (await fetch("chess_kids.py")).text();
+      await py.runPythonAsync(code);
+      document.getElementById("loading").remove();
+    } catch (e) {
+      document.getElementById("loading").textContent = "Oops! Chompy fell asleep: " + e;
+    }
+  })();
+</script>
+</body>
+</html>
