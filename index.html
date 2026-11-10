@@ -13,9 +13,9 @@
          font-family: "Comic Sans MS","Chalkboard SE","Marker Felt",system-ui,sans-serif; }
   h1 { text-align:center; margin:10px 0; font-size: clamp(22px,4vw,34px); }
   #wrap { display:flex; flex-wrap:wrap; gap:16px; justify-content:center; align-items:flex-start; padding-bottom:20px; }
-  #board { display:grid; grid-template-columns:repeat(8,1fr); width:var(--bs); height:var(--bs);
+  #board { display:grid; grid-template-columns:repeat(8,1fr); grid-template-rows:repeat(8,1fr); width:var(--bs); height:var(--bs);
            border:6px solid #8b5cf6; border-radius:14px; overflow:hidden; box-shadow:0 6px 18px rgba(0,0,0,.25); }
-  .sq { position:relative; display:flex; align-items:center; justify-content:center; font-size:calc(var(--bs) / 8 * .78); line-height:1; }
+  .sq { min-width:0; min-height:0; overflow:hidden; position:relative; display:flex; align-items:center; justify-content:center; font-size:calc(var(--bs) / 8 * .78); line-height:1; }
   .sq.l { background-color:#fff3c4; } .sq.d { background-color:#7ec8a9; }
   .sq.last { background-image:linear-gradient(rgba(255,214,0,.5),rgba(255,214,0,.5)); }
   .sq.sel { box-shadow: inset 0 0 0 4px #ff9f1c; }
@@ -35,6 +35,10 @@
   @keyframes pop { from { transform:scale(.9); opacity:.4; } }
   #status { font-weight:bold; font-size:20px; text-align:center; }
   #mission { background:#ffe08a; color:#5a3b00; border-radius:14px; padding:10px 12px; font-size:17px; }
+  .tray { background:#fff; color:#3b2a6b; border:2px solid #c4b5fd; border-radius:12px; padding:6px 10px; font-size:16px; }
+  .tray div { min-height:30px; display:flex; align-items:center; flex-wrap:wrap; gap:2px; }
+  .tray .pc { font-size:24px; } .tray .none { opacity:.5; font-size:14px; }
+  .tray .pc.w { color:#fff; text-shadow:-1px -1px 0 #555,1px -1px 0 #555,-1px 1px 0 #555,1px 1px 0 #555; }
   #stars { font-size:20px; font-weight:bold; text-align:center; }
   #controls { display:flex; flex-wrap:wrap; gap:8px; }
   button, select { font:inherit; font-size:17px; padding:10px 14px; border-radius:12px; border:3px solid #8b5cf6; background:#fff; color:#3b2a6b; }
@@ -58,6 +62,7 @@
     <div id="status"></div>
     <div id="mission"></div>
     <div id="stars"></div>
+    <div id="trays"></div>
     <div id="controls">
       <select id="level" aria-label="Difficulty">
         <option value="easy">🐣 Baby Dragon (easy)</option>

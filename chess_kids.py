@@ -302,6 +302,8 @@ selected = None
 last = ()
 hint = set()
 hist = []
+won_w = []   # black pieces YOU captured
+won_b = []   # white pieces CHOMPY captured
 busy = False
 over = False
 end_text = ""
@@ -353,6 +355,24 @@ def level():
     return el("level").value
 
 
+def tray(lst, cls):
+    rank = {'Q': 0, 'R': 1, 'B': 2, 'N': 3, 'P': 4}
+    s = ''.join(f'<span class="pc {cls}">{SOLID[x]}\uFE0E</span>' for x in sorted(lst, key=rank.get))
+    return s or '<span class="none">none yet</span>'
+
+
+def render_trays():
+    you = sum(VAL[x] for x in won_w) // 100
+    chompy = sum(VAL[x] for x in won_b) // 100
+    d = you - chompy
+    lead = "all square" if d == 0 else (f"you lead by {d} ⭐" if d > 0 else f"Chompy leads by {-d}")
+    el("trays").innerHTML = (
+        f'<div class="tray"><b>🧒 You</b> <small>({lead})</small>'
+        f'<div>🍪 Won: {tray(won_w, "b")}</div><div>😢 Lost: {tray(won_b, "w")}</div></div>'
+        f'<div class="tray"><b>🐲 Chompy</b>'
+        f'<div>🍪 Won: {tray(won_b, "w")}</div><div>😢 Lost: {tray(won_w, "b")}</div></div>')
+
+
 def render():
     ms = legal(pos) if not over else []
     targets = {m[1] for m in ms if selected is not None and m[0] == selected}
@@ -387,6 +407,7 @@ def render():
         txt = "🧒 Your turn! Tap a piece."
     el("status").textContent = txt
     el("stars").textContent = f"⭐ Stars: {stars}"
+    render_trays()
     m = MISSIONS[mission_order[mission_i % len(MISSIONS)]]
     el("mission").textContent = "🎯 Mission: " + m[0]
 
@@ -401,6 +422,8 @@ def make_move(m):
     if u == 'P' and t == pos.ep and cap == '.':
         cap = 'p'
     new = apply(pos, m)
+    if cap != '.':
+        (won_w if pos.turn == 'w' else won_b).append(cap.upper())
     ev = dict(piece=u, cap='' if cap == '.' else cap.upper(),
               castle=(u == 'K' and abs(t - f) == 2), promo=bool(pr),
               check=in_check(new), to_rank=8 - t // 8)
@@ -449,7 +472,7 @@ async def player_move(m):
     global busy, selected, stars, mission_i
     busy = True
     selected = None
-    hist.append((pos, last))
+    hist.append((pos, last, won_w[:], won_b[:]))
     ev = make_move(m)
     mission = MISSIONS[mission_order[mission_i % len(MISSIONS)]]
     if mission[1](ev):
@@ -518,7 +541,8 @@ def on_undo(event):
     global pos, last, selected, hint, over
     if busy or not hist:
         return
-    pos, last = hist.pop()
+    pos, last, w, b = hist.pop()
+    won_w[:], won_b[:] = w, b
     selected, hint, over = None, set(), False
     el("confetti").innerHTML = ""
     say("Time travel! ⏪ Poof! Do-over!", '🧙')
@@ -528,6 +552,8 @@ def on_undo(event):
 def new_game(event=None):
     global pos, selected, last, hint, hist, busy, over, mission_i
     pos, selected, last, hint, hist = Pos(), None, (), set(), []
+    won_w.clear()
+    won_b.clear()
     busy, over, mission_i = False, False, 0
     random.shuffle(mission_order)
     el("confetti").innerHTML = ""
