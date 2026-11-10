@@ -84,7 +84,7 @@
   (async () => {
     try {
       const py = await loadPyodide();
-      const code = await (await fetch("chess_kids.py")).text();
+      const code = await (await fetch("chess_kids.py?v=" + Date.now(), { cache: "no-store" })).text();
       await py.runPythonAsync(code);
       document.getElementById("loading").remove();
     } catch (e) {
